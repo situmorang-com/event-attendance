@@ -1,0 +1,16 @@
+# Secrets and local state stay out of the build context.
+.env
+.env.*
+!.env.example
+# Rebuilt in the image; a macOS node_modules cannot load on Linux.
+node_modules
+build
+.svelte-kit
+# Local data is never baked in; the container gets an empty volume.
+data
+backups
+.git
+.claude
+.DS_Store
+docs
+scripts

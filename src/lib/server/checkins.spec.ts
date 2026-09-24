@@ -1,0 +1,124 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { checkIn, listAttendees, type ContactInput } from './checkins';
+import { listContacts } from './contacts';
+import { createDb, type DB } from './database';
+import { createEvent } from './events';
+import { computeStats } from './stats';
+
+const meta = { method: 'form' as const, device: 'ios' as const, consent: true };
+
+function person(overrides: Partial<ContactInput> = {}): ContactInput {
+	return {
+		name: 'Rina Wijaya',
+		email: 'rina@example.com',
+		phone: '+6281234567890',
+		company: 'SRKK',
+		jobTitle: '',
+		...overrides
+	};
+}
+
+describe('checkIn', () => {
+	let db: DB;
+	let eventId: string;
+
+	beforeEach(() => {
+		db = createDb(':memory:');
+		eventId = createEvent(db, {
+			name: 'Launch',
+			venue: 'Jakarta',
+			startsAt: null,
+			timezone: 'Asia/Jakarta',
+			qrMode: 'static'
+		});
+	});
+
+	it('creates a contact and numbers arrivals in order', () => {
+		const a = checkIn(db, eventId, person(), meta);
+		const b = checkIn(
+			db,
+			eventId,
+			person({ name: 'Dewi', email: 'dewi@example.com', phone: null }),
+			meta
+		);
+		expect(a).toMatchObject({ status: 'created', number: 1, isNewContact: true });
+		expect(b).toMatchObject({ status: 'created', number: 2, isNewContact: true });
+	});
+
+	it('recognises a repeat scan instead of double counting', () => {
+		const first = checkIn(db, eventId, person(), meta, 1_000);
+		const again = checkIn(
+			db,
+			eventId,
+			person({ email: 'RINA@example.com'.toLowerCase() }),
+			meta,
+			5_000
+		);
+		expect(again).toMatchObject({ status: 'existing', number: 1, checkedInAt: 1_000 });
+		expect(again.contactId).toBe(first.contactId);
+		expect(listAttendees(db, eventId)).toHaveLength(1);
+	});
+
+	it('keeps the best-known details when a later check-in leaves fields blank', () => {
+		checkIn(db, eventId, person({ jobTitle: 'CIO' }), meta);
+		const other = createEvent(db, {
+			name: 'Summit',
+			venue: '',
+			startsAt: null,
+			timezone: 'UTC',
+			qrMode: 'static'
+		});
+		checkIn(db, other, person({ company: '', jobTitle: '', phone: null }), meta);
+		const [contact] = listContacts(db);
+		expect(contact).toMatchObject({
+			company: 'SRKK',
+			job_title: 'CIO',
+			phone: '+6281234567890',
+			events_attended: 2
+		});
+	});
+
+	it('matches on phone only when that cannot merge two different people', () => {
+		const staffAdded = checkIn(db, eventId, person({ email: null }), { ...meta, method: 'staff' });
+		const other = createEvent(db, {
+			name: 'Summit',
+			venue: '',
+			startsAt: null,
+			timezone: 'UTC',
+			qrMode: 'static'
+		});
+		const selfServe = checkIn(db, other, person(), meta);
+		expect(selfServe.contactId).toBe(staffAdded.contactId);
+
+		const colleague = checkIn(
+			db,
+			other,
+			person({ name: 'Assistant', email: 'pa@example.com' }),
+			meta
+		);
+		expect(colleague.contactId).not.toBe(staffAdded.contactId);
+	});
+
+	it('marks people who attended an earlier event as returning', () => {
+		const earlier = createEvent(db, {
+			name: 'Meetup',
+			venue: '',
+			startsAt: null,
+			timezone: 'UTC',
+			qrMode: 'static'
+		});
+		checkIn(db, earlier, person(), meta, 1_000);
+		checkIn(db, eventId, person(), meta, 2_000);
+		checkIn(
+			db,
+			eventId,
+			person({ name: 'New Face', email: 'new@example.com', phone: null }),
+			meta,
+			3_000
+		);
+
+		const stats = computeStats(listAttendees(db, eventId), { now: 3_000, isOpen: false });
+		expect(stats).toMatchObject({ total: 2, returning: 1, newContacts: 1 });
+		expect(stats.devices.ios).toBe(2);
+	});
+});

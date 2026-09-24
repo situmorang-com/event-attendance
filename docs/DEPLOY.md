@@ -1,0 +1,130 @@
+# Deploying Hadir to Coolify
+
+Target: **https://checkin.situmorang.com** on the Coolify at https://coolify.situmorang.com
+(server `72.60.233.198`), built from `situmorang-com/event-attendance` (public), branch `main`.
+
+Each step is marked **verified** (run and checked) or **configured** (set up, not exercised).
+
+## 1. DNS
+
+An A record for `checkin.situmorang.com` pointing to `72.60.233.198`, at Niagahoster (the
+situmorang.com DNS host). No Cloudflare proxy is involved, so Coolify's Traefik issues the Let's
+Encrypt certificate itself on the first request after the record resolves.
+
+## 2. Create the application
+
+Dockerfile build pack, port 3000, health check `GET /healthz` expecting 200, memory limit
+512m, and **single writer**:
+
+```sh
+coolify.sh app create --name hadir --repo situmorang-com/event-attendance --branch main \
+  --project <PROJECT_UUID> --server <SERVER_UUID> \
+  --domain https://checkin.situmorang.com --port 3000 --health-path /healthz \
+  --memory 512m --single-writer
+```
+
+### Single writer, not rolling updates
+
+Coolify's default deploy runs the new container beside the old one, then switches traffic.
+Hadir can't do that safely:
+
+- SQLite gets exactly one writer.
+- The live entrance-screen feed and the rate limits live in the process's memory, so a second
+  container would split them.
+
+`--single-writer` pins the container name, which is Coolify's way to turn rolling updates off.
+The cost is **a few seconds of downtime per deploy**:
+
+- **Don't deploy during an event.**
+- Entrance screens and dashboards reconnect by themselves.
+- An attendee mid-form keeps their 30-minute pass and can submit once the app is back.
+
+## 3. Storage, before the first deploy
+
+A named volume mounted at `/data`. The database is `DB_PATH=/data/attendance.db`, and its
+`-wal` file sits in the same volume.
+
+```sh
+coolify.sh storage add <APP_UUID> --name data --mount /data
+```
+
+The image creates `/data` owned by `node` (uid 1000), so an empty named volume is writable
+with no host step (**verified** locally: fresh volume, write, restart, data still there).
+
+## 4. Backups
+
+Coolify's volume backup runs nightly at 02:00 server time and keeps 7:
+
+```sh
+coolify.sh storage backup <APP_UUID> <STORAGE_UUID> --cron "0 2 * * *" --keep 7
+```
+
+The database runs in WAL mode with the `-wal` inside the volume, so the archive is consistent
+without stopping the app. **configured**; restore not yet exercised.
+
+## 5. Environment variables
+
+Pushed with `coolify.sh env push <APP_UUID> .env.production`. The file is gitignored and never
+committed.
+
+| Variable                | Value                            | Why                                                                                                      |
+| ----------------------- | -------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `ORIGIN`                | `https://checkin.situmorang.com` | Otherwise every form POST is 403 behind Traefik. Also the base URL printed into QR codes.                |
+| `ADMIN_PASSWORD`        | random, 24 characters            | Organizer sign-in. Without it, sign-in is disabled in production.                                        |
+| `ORG_NAME`              | `SRKK`                           | The consent line attendees agree to.                                                                     |
+| `ADDRESS_HEADER`        | `X-Forwarded-For`                | Real client IPs for the rate limits. Without it, every attendee looks like Traefik and shares one limit. |
+| `XFF_DEPTH`             | `1`                              | Traefik is the only proxy in front. Set to `2` if Cloudflare proxying is ever turned on.                 |
+| `DB_PATH`               | `/data/attendance.db`            | Inside the mount.                                                                                        |
+| `DEFAULT_PHONE_COUNTRY` | `ID`                             | Reads `0812…` as `+62812…`.                                                                              |
+| `DEFAULT_TIMEZONE`      | `Asia/Jakarta`                   | Fallback only; events store their own zone.                                                              |
+
+These are baked into the image instead:
+
+- `NODE_ENV=production`, `PORT=3000`
+- `SHUTDOWN_TIMEOUT=3`: an open entrance-screen stream would otherwise hold shutdown for
+  30s, past Docker's 10s stop grace, and SQLite would be killed instead of closed. **Verified**
+  locally: `docker stop` with a stream open took 3.2s and left no `-wal` file.
+
+Signing keys need no variable. A secret is generated on first start and stored in the
+database, so sessions survive redeploys (**verified** across a container restart).
+
+## 6. First sign-in
+
+Open https://checkin.situmorang.com/admin and sign in with `ADMIN_PASSWORD`. It is in
+`.env.production` on the machine that deployed, and in Coolify under the app's Environment
+Variables.
+
+## 7. Rolling back
+
+```sh
+coolify.sh rollback-images <APP_UUID>   # list previous images
+coolify.sh rollback <APP_UUID> <TAG>    # redeploy one without rebuilding
+```
+
+The schema only ever grows (`CREATE TABLE IF NOT EXISTS`), so an older image runs fine on a
+newer database.
+
+## 8. Restoring from a backup
+
+1. Stop the app in Coolify.
+2. Restore the chosen archive into the `data` volume from the Coolify storage/backup screen.
+3. Start the app. There is no migration step; the app opens whatever `attendance.db` it finds.
+
+## 9. Updating
+
+Push to `main`. Coolify's GitHub integration redeploys on push. Check `/healthz`, then open an
+entrance screen to confirm the live stream reconnects.
+
+## What was verified locally (Docker, Colima)
+
+- `docker build` succeeds, then again for `--platform linux/amd64` (the VPS architecture).
+  The prebuilt SQLite binding loads in the build stage, so a bad binding fails the build,
+  not the deploy.
+- Fresh named volume: health 200, sign-in, create event, attendee check-in, CSV export.
+- A cross-site POST (`Origin: http://evil.example`) gets 403.
+- `docker stop` with a live stream open takes about 3s and leaves no `-wal` or `-shm` file.
+- After a restart, data and organizer sessions survive, and Docker reports the container
+  healthy.
+
+Not verifiable locally: the certificate, Traefik routing, real client IPs through
+`X-Forwarded-For`, and the Coolify backup restore.
