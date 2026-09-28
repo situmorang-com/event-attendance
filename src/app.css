@@ -38,6 +38,11 @@
 	--cat-3: #1baf7a;
 	--grid: #e6e8f0;
 	--axis: #c3c6d4;
+	/* Status fills (the dataviz status steps), the same in both modes and always shown with a
+	   label: amber is 1.8:1 on white by design, and every step clears 3:1 on the dark surface. */
+	--status-good: #0ca30c;
+	--status-warn: #fab219;
+	--status-bad: #d03b3b;
 
 	--shadow-sm: 0 1px 2px rgb(16 18 40 / 0.06);
 	--shadow: 0 1px 2px rgb(16 18 40 / 0.05), 0 10px 30px -12px rgb(16 18 40 / 0.14);

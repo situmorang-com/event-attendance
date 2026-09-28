@@ -30,6 +30,11 @@ dev server it stays hidden and the autofill path is used instead.
 - **Printable QR mode** for posters, badges and table cards, with an A4 poster page.
 - **Dashboard.** Check-ins, new versus returning contacts, the busiest window, an arrivals chart,
   a device split and a searchable attendee list, all updating live.
+- **Invitation planner.** Every event has a guest list, grouped by company. Add people from your
+  contacts, type names, or paste rows from a spreadsheet. Record each reply with one tap
+  (attending, tentative, declined) plus a note, and send a WhatsApp or email follow-up that fits
+  the reply. On the day, invitees are ticked off live as they check in, and walk-ins are listed
+  separately. See [Invitations](#invitations).
 - **Contact database.** People are matched by email across every event, their details improve
   with each visit, and everything exports to CSV (Excel-safe, UTF-8).
 - **Staff tools.** Add someone by hand, remove a check-in, open or close the doors, and delete a
@@ -49,8 +54,43 @@ npm run dev
    the QR code uses this computer's Wi-Fi address automatically, because phones can't open
    `localhost`.
 
-To see the dashboard with realistic data, run `npm run demo:seed`. It adds two demo events and
-about 60 check-ins with `@example.com` addresses. Delete the `data/` folder to start fresh.
+To see the dashboard with realistic data, run `npm run demo:seed`. It adds three demo events,
+about 60 check-ins with `@example.com` addresses, and two guest lists: one for the event under
+way, one for an upcoming dinner. Delete the `data/` folder to start fresh.
+
+## Invitations
+
+Open an event and switch to its **Invitations** tab.
+
+- **Adding people.** Type a company to see who from that company is already in your contacts,
+  and tick the ones to invite. Or type one person per line, with an optional job title, email or
+  mobile after the name (`Andi Pratama, IT Manager, andi@batavia.co.id`). Numbered lists pasted
+  from WhatsApp or Word work too. Adding someone who is already on the list is skipped and
+  reported.
+- **Checking each field.** Press **Check each field** to see what you typed or pasted split into
+  one card per person (name, company, job title, email, mobile, LinkedIn, reply, note). Fix
+  anything, add or remove rows, then add them. Nothing is saved before that.
+- **LinkedIn links.** A profile link works on its own, one per line: Hadir reads the name from
+  the link (`linkedin.com/in/rina-wijaya-4a1b2c` is "Rina Wijaya") and keeps the link on the
+  guest so you can open the profile and fill in the rest. It doesn't fetch the profile itself:
+  LinkedIn's terms forbid scraping and profiles sit behind a sign-in. When a link doesn't spell
+  out a name ("rinaw88"), the review asks you to type it.
+- **Pasting a spreadsheet.** Include the header row and each column lands in the right place.
+  Headers can be English or Indonesian (_Nama_, _Perusahaan_, _Jabatan_, _No. HP_), and Outlook's
+  separate first-name and last-name columns work. A reply column (_Yes_, _Hadir_, _Tentative_,
+  _Tidak hadir_…) sets each reply. Anything it can't read, such as "Yes, with a colleague", is
+  kept word for word as a note.
+- **Replies.** Tap _Attending_, _Tentative_ or _Declined_; tap it again to clear it. Notes save
+  when you leave the field. The message button opens WhatsApp (for numbers in international
+  format) or email, with a text that fits the reply: an invitation, a confirmation, a follow-up
+  or a thank-you. Nothing is sent until you press send.
+- **Companies.** "PT Batavia Foods Tbk" and "Batavia Foods" are one company. Rename a company to
+  merge spellings or fix a typo across the whole group.
+- **On the day.** A check-in ticks off its invitee by email, then mobile, then name. A name
+  counts when the companies don't contradict it, and titles and degrees are ignored, so
+  "Bapak Hendra Gunawan, S.E." on the list is the "Hendra Gunawan" who scans in. _Not arrived_
+  lists who said yes but hasn't come. _Walk-ins_ lists who came without an invitation, and one
+  tap adds them to the list.
 
 ## Configuration
 
@@ -94,8 +134,10 @@ network.
 - **Check-ins:** time, device type (iPhone, Android or other), method (form, contact card,
   one-tap or staff) and when consent was given.
 - **Entrance screen:** shows first name and last initial, nothing else.
-- **Deleting a contact** on the Contacts page removes that person and their whole check-in
-  history.
+- **Invitations:** what the organizer enters on a guest list: name, company, job title, email,
+  mobile, LinkedIn profile link, reply and note. Deleting an event deletes its guest list.
+- **Deleting a contact** on the Contacts page removes that person, their whole check-in history
+  and any invitation under their email.
 - **Timestamps** in CSV exports are ISO 8601, in UTC.
 
 ## Project layout
@@ -105,16 +147,19 @@ src/
   lib/
     qr.ts                     soft-cornered QR renderer (SVG, browser and server)
     time.ts, names.ts         event time zones, "Rina W."-style public names
-    components/               QR code, arrivals chart, device split, event form
+    invitations.ts            replies, name and company matching keys, follow-up messages
+    components/               QR code, charts, event form, guest-list rows and forms
     server/
       database.ts             schema (SQLite, created on start)
       checkins.ts             check-in and contact matching logic
+      invitations.ts          guest lists: storage, company groups, pairing with check-ins
+      guest-list.ts           reading typed and pasted guest lists
       qr-token.ts             rotating QR tokens and the 30-minute scan pass
       auth.ts                 signed organizer session
       bus.ts                  in-process pub/sub behind the live stream
   routes/
     c/[id]/                   attendee check-in page (the QR target)
-    admin/(app)/              events, event dashboard, contacts
+    admin/(app)/              events, event dashboard, invitations, contacts
     admin/events/[id]/        display (entrance screen), stream (SSE), exports, poster
 scripts/seed-demo.ts          demo data (npm run demo:seed)
 ```
@@ -123,8 +168,8 @@ scripts/seed-demo.ts          demo data (npm run demo:seed)
 
 ```bash
 npm run dev         # dev server on your network (port 5173)
-npm test            # unit tests: matching, tokens, phone numbers, time zones, CSV
+npm test            # unit tests: matching, tokens, phone numbers, time zones, CSV, guest lists
 npm run check       # svelte-check / TypeScript
 npm run build       # production build in build/
-npm run demo:seed   # demo events and check-ins
+npm run demo:seed   # demo events, check-ins and guest lists
 ```

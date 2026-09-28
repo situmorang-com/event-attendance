@@ -1,3 +1,4 @@
+import type { ContactRow } from './checkins';
 import type { DB } from './database';
 
 export interface ContactListRow {
@@ -40,6 +41,22 @@ export function countContacts(db: DB): number {
 	return (db.prepare(`SELECT COUNT(*) AS n FROM contacts`).get() as { n: number }).n;
 }
 
+/** Contacts by id, in the order asked for; unknown ids are dropped. */
+export function getContacts(db: DB, ids: string[]): ContactRow[] {
+	if (!ids.length) return [];
+	const rows = db
+		.prepare(`SELECT * FROM contacts WHERE id IN (SELECT value FROM json_each(?))`)
+		.all(JSON.stringify(ids)) as ContactRow[];
+	const byId = new Map(rows.map((r) => [r.id, r]));
+	return ids.flatMap((id) => byId.get(id) ?? []);
+}
+
+/** Erasure: the person, their check-ins, and any guest-list entry under their email. */
 export function deleteContact(db: DB, id: string) {
-	db.prepare(`DELETE FROM contacts WHERE id = ?`).run(id);
+	db.transaction(() => {
+		db.prepare(
+			`DELETE FROM invitations WHERE email = (SELECT email FROM contacts WHERE id = ?)`
+		).run(id);
+		db.prepare(`DELETE FROM contacts WHERE id = ?`).run(id);
+	})();
 }

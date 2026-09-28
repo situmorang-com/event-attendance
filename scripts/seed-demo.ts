@@ -1,5 +1,6 @@
-// Fills the database with a demo event and ~60 realistic check-ins so the dashboard and
-// entrance screen have something to show. Contacts use @example.com addresses.
+// Fills the database with demo events, ~60 realistic check-ins and two guest lists so the
+// dashboard, entrance screen and invitation planner have something to show. Contacts use
+// @example.com addresses.
 //
 //   npm run demo:seed            (uses DB_PATH or data/attendance.db)
 //
@@ -157,4 +158,110 @@ PEOPLE.forEach((name, i) => {
 	);
 });
 
+// Guest lists. Most of today's arrivals were invited (some only by name, some with a title in
+// front), a few confirmed guests never came, and the last fifteen arrivals are walk-ins.
+type Reply = 'pending' | 'yes' | 'maybe' | 'no';
+interface Guest {
+	name: string;
+	company: string;
+	jobTitle?: string;
+	email?: string | null;
+	phone?: string | null;
+	reply: Reply;
+	note?: string;
+}
+
+function invite(eventId: string, guests: Guest[], addedAt: number) {
+	const insert = db.prepare(
+		`INSERT INTO invitations (event_id, name, company, job_title, email, phone, reply, note,
+			replied_at, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	);
+	guests.forEach((g, i) => {
+		const repliedAt = g.reply === 'pending' ? null : addedAt + (i + 1) * 5 * 3_600_000;
+		insert.run(
+			eventId,
+			g.name,
+			g.company,
+			g.jobTitle ?? '',
+			g.email ?? null,
+			g.phone ?? null,
+			g.reply,
+			g.note ?? '',
+			repliedAt,
+			addedAt,
+			repliedAt ?? addedAt
+		);
+	});
+}
+
+const NOTES: Record<number, string> = {
+	2: 'Vegetarian',
+	7: 'Arriving after lunch',
+	12: 'Bringing a colleague from finance',
+	21: 'Asked about parking'
+};
+// On the list with a title, by name only: they still match the check-ins typed without one.
+const TITLED: Record<number, string> = { 11: 'Mr', 14: 'Bapak', 20: 'Ibu' };
+
+const invited: Guest[] = PEOPLE.slice(0, 45).map((name, i) => {
+	const p = person(name, i);
+	const byName = i % 3 === 2; // on the list by name only; matched to their check-in by name
+	return {
+		name: TITLED[i] ? `${TITLED[i]} ${name}` : name,
+		company: p.company,
+		jobTitle: p.jobTitle,
+		email: byName ? null : p.email,
+		phone: byName ? null : p.phone,
+		reply: i % 11 === 4 ? 'maybe' : i % 13 === 6 ? 'pending' : 'yes',
+		note: NOTES[i]
+	};
+});
+const noShows: Guest[] = [
+	{ name: 'Budi Santoso', company: 'Selat Energy', jobTitle: 'CIO', reply: 'yes' },
+	{ name: 'Siti Aminah', company: 'Kopi Kita', jobTitle: 'Finance Director', reply: 'yes' },
+	{ name: 'Johan Lim', company: 'Garuda Retail', phone: '+60123456789', reply: 'yes' },
+	{
+		name: 'Agus Setiawan',
+		company: 'Batavia Foods',
+		reply: 'no',
+		note: 'Overseas that week, sending Rizky instead'
+	},
+	{ name: 'Melati Kusuma', company: 'Sinar Digital', jobTitle: 'CFO', reply: 'no' },
+	{ name: 'Rahmat Hidayat', company: 'Tanjung Health', reply: 'maybe' },
+	{
+		name: 'Diana Putri',
+		company: 'Merdeka Finance',
+		email: 'diana.putri@example.com',
+		reply: 'pending'
+	}
+];
+invite(today, [...invited, ...noShows], now - 21 * 86_400_000);
+
+// An upcoming event that's still being planned: replies are coming in, nobody has checked in.
+const dinner = createEvent(
+	'Year-end Customer Dinner (demo)',
+	'Hotel Mulia, Jakarta',
+	now + 30 * 86_400_000,
+	'rotating'
+);
+invite(
+	dinner,
+	PEOPLE.slice(10, 34).map((name, i) => {
+		const p = person(name, i + 10);
+		return {
+			name,
+			company: p.company,
+			jobTitle: p.jobTitle,
+			email: p.email,
+			phone: p.phone,
+			reply: i % 4 === 3 ? 'pending' : i % 7 === 2 ? 'no' : i % 5 === 1 ? 'maybe' : 'yes'
+		};
+	}),
+	now - 3 * 86_400_000
+);
+
 console.log(`Demo data added. Open /admin/events/${today} (and /admin/events/${today}/display).`);
+console.log(
+	`Guest lists: /admin/events/${today}/invitations and /admin/events/${dinner}/invitations.`
+);

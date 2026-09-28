@@ -5,6 +5,7 @@
 	import MapPin from '@lucide/svelte/icons/map-pin';
 	import Calendar from '@lucide/svelte/icons/calendar';
 	import ScanLine from '@lucide/svelte/icons/scan-line';
+	import MailCheck from '@lucide/svelte/icons/mail-check';
 	import type { PageProps } from './$types';
 
 	let { data }: PageProps = $props();
@@ -70,6 +71,12 @@
 							)}{/if}
 					</span>
 				</div>
+				{#if event.invited}
+					<a class="rsvp" href="/admin/events/{event.id}/invitations">
+						<MailCheck size={15} />
+						{event.attending.toLocaleString()} of {event.invited.toLocaleString()} invited are attending
+					</a>
+				{/if}
 			</li>
 		{/each}
 	</ul>
@@ -159,6 +166,23 @@
 		gap: 8px;
 		margin-top: 6px;
 		font-size: 14px;
+	}
+
+	.rsvp {
+		position: relative;
+		z-index: 1;
+		justify-self: start;
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font-size: 14px;
+		font-weight: 600;
+		color: var(--text-2);
+		text-decoration: none;
+	}
+
+	.rsvp:hover {
+		color: var(--brand-text);
 	}
 
 	.count strong {

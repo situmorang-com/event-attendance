@@ -7,6 +7,7 @@ import { DEFAULT_PHONE_COUNTRY } from '$lib/server/config';
 import { db } from '$lib/server/db';
 import { parseEventForm } from '$lib/server/event-form';
 import { deleteEvent, getEvent, setEventOpen, updateEvent } from '$lib/server/events';
+import { countInvitations } from '$lib/server/invitations';
 import { cleanText, isValidEmail, normalizeEmail, normalizePhone } from '$lib/server/normalize';
 import { computeStats } from '$lib/server/stats';
 import { checkinUrl, publicBaseUrl } from '$lib/server/urls';
@@ -28,6 +29,7 @@ export const load: PageServerLoad = ({ params, url }) => {
 		event,
 		attendees,
 		stats: computeStats(attendees, { now, isOpen: !!event.is_open }),
+		invitations: countInvitations(db, event.id),
 		staticLink: checkinUrl(base, event.id),
 		reachable,
 		created: url.searchParams.has('created'),

@@ -113,7 +113,11 @@
 									method="POST"
 									action="?/delete"
 									use:enhance={({ cancel }) => {
-										if (!confirm(`Permanently delete ${c.name} and their check-in history?`))
+										if (
+											!confirm(
+												`Permanently delete ${c.name}, their check-in history and their invitations?`
+											)
+										)
 											cancel();
 									}}
 								>

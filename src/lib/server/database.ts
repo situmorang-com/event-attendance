@@ -45,7 +45,38 @@ const SCHEMA = `
 	);
 	CREATE INDEX IF NOT EXISTS idx_checkins_event ON checkins(event_id, checked_in_at);
 	CREATE INDEX IF NOT EXISTS idx_checkins_contact ON checkins(contact_id);
+
+	-- The guest list an organizer plans before the event. Deliberately not tied to contacts:
+	-- people are often invited by name alone, long before they ever check in.
+	CREATE TABLE IF NOT EXISTS invitations (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+		name TEXT NOT NULL,
+		company TEXT NOT NULL DEFAULT '',
+		job_title TEXT NOT NULL DEFAULT '',
+		email TEXT,
+		phone TEXT,
+		linkedin TEXT,
+		reply TEXT NOT NULL DEFAULT 'pending' CHECK (reply IN ('pending', 'yes', 'maybe', 'no')),
+		note TEXT NOT NULL DEFAULT '',
+		replied_at INTEGER,
+		created_at INTEGER NOT NULL,
+		updated_at INTEGER NOT NULL
+	);
+	CREATE INDEX IF NOT EXISTS idx_invitations_event ON invitations(event_id);
+	CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email);
 `;
+
+/** Brings a database up to date. Safe to run on every start, and on a reused connection. */
+export function migrate(db: DB) {
+	db.exec(SCHEMA);
+	// Columns added after their table first shipped: CREATE TABLE IF NOT EXISTS won't add them.
+	const has = (table: string, column: string) =>
+		(db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).some(
+			(c) => c.name === column
+		);
+	if (!has('invitations', 'linkedin')) db.exec(`ALTER TABLE invitations ADD COLUMN linkedin TEXT`);
+}
 
 /** Opens (and migrates) a SQLite database. Pass ':memory:' for tests. */
 export function createDb(path: string): DB {
@@ -54,6 +85,6 @@ export function createDb(path: string): DB {
 	db.pragma('journal_mode = WAL');
 	db.pragma('foreign_keys = ON');
 	db.pragma('busy_timeout = 5000');
-	db.exec(SCHEMA);
+	migrate(db);
 	return db;
 }

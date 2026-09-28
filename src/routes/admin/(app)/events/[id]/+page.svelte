@@ -6,6 +6,7 @@
 	import ArrivalsChart from '$lib/components/ArrivalsChart.svelte';
 	import DeviceSplit from '$lib/components/DeviceSplit.svelte';
 	import EventFields from '$lib/components/EventFields.svelte';
+	import EventTabs from '$lib/components/EventTabs.svelte';
 	import QrCode from '$lib/components/QrCode.svelte';
 	import { connectLive, type LiveArrival, type LiveQr } from '$lib/live';
 	import { initials } from '$lib/names';
@@ -133,6 +134,13 @@
 		</a>
 	</div>
 </header>
+
+<EventTabs
+	eventId={event.id}
+	current="checkins"
+	checkins={stats.total}
+	invitations={data.invitations}
+/>
 
 {#if data.created}
 	<p class="banner banner-brand created rise">

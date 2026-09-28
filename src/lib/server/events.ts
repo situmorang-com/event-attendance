@@ -26,15 +26,26 @@ export function getEvent(db: DB, id: string): EventRow | undefined {
 	return db.prepare(`SELECT * FROM events WHERE id = ?`).get(id) as EventRow | undefined;
 }
 
+export type EventListRow = EventRow & {
+	checkins: number;
+	last_checkin_at: number | null;
+	/** Guest-list size, and how many of them said yes. */
+	invited: number;
+	attending: number;
+};
+
 export function listEvents(db: DB) {
 	return db
 		.prepare(
-			`SELECT e.*, COUNT(c.id) AS checkins, MAX(c.checked_in_at) AS last_checkin_at
+			`SELECT e.*, COUNT(c.id) AS checkins, MAX(c.checked_in_at) AS last_checkin_at,
+				(SELECT COUNT(*) FROM invitations i WHERE i.event_id = e.id) AS invited,
+				(SELECT COUNT(*) FROM invitations i WHERE i.event_id = e.id AND i.reply = 'yes')
+					AS attending
 			FROM events e LEFT JOIN checkins c ON c.event_id = e.id
 			GROUP BY e.id
 			ORDER BY COALESCE(e.starts_at, e.created_at) DESC`
 		)
-		.all() as (EventRow & { checkins: number; last_checkin_at: number | null })[];
+		.all() as EventListRow[];
 }
 
 export function createEvent(db: DB, input: EventInput, now = Date.now()): string {
