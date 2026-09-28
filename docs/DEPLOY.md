@@ -18,10 +18,24 @@ Dockerfile build pack, port 3000, health check `GET /healthz` expecting 200, mem
 
 ```sh
 coolify.sh app create --name hadir --repo situmorang-com/event-attendance --branch main \
-  --project <PROJECT_UUID> --server <SERVER_UUID> \
+  --project 2qoq4g12mrjxcdkwousez2dx --server p40c04owo8wckgcg8woo8888 \
   --domain https://checkin.situmorang.com --port 3000 --health-path /healthz \
   --memory 512m --single-writer
 ```
+
+Created as app `slbb0tvqksf2siuow2vkwcet` in project `event-attendance`.
+
+### The image must contain curl
+
+Coolify's health check runs `curl … || wget …` **inside the container**, and on Coolify 4.3.23
+it replaces the Dockerfile's own `HEALTHCHECK`. `node:*-slim` ships neither tool.
+
+- **What went wrong on the first deploy:** Docker marked the container unhealthy even though
+  the app was serving. Traefik won't route to an unhealthy container, so the domain answered 404
+  on HTTP and served Traefik's default certificate on HTTPS.
+- **The fix:** the Dockerfile installs `curl`.
+- **Verified locally:** Coolify's exact health command exits 1 in the old image and 0 in the
+  new one.
 
 ### Single writer, not rolling updates
 
@@ -112,8 +126,16 @@ newer database.
 
 ## 9. Updating
 
-Push to `main`. Coolify's GitHub integration redeploys on push. Check `/healthz`, then open an
-entrance screen to confirm the live stream reconnects.
+The repo is public and connected without the Coolify GitHub App, so a push does not redeploy
+by itself. Either:
+
+- run `coolify.sh deploy <APP_UUID> --wait --health-url https://checkin.situmorang.com/healthz`, or
+- use the GitHub Actions workflow (`.github/workflows/deploy.yml`), which runs check, tests and
+  build on every push to `main` and then calls Coolify's deploy webhook. It needs two repository
+  secrets: `COOLIFY_WEBHOOK` and `COOLIFY_TOKEN`, a token with **only** the deploy permission.
+
+Afterwards, check `/healthz`, then open an entrance screen to confirm the live stream
+reconnects.
 
 ## What was verified locally (Docker, Colima)
 

@@ -20,6 +20,11 @@ RUN npm run build && npm prune --omit=dev
 
 FROM node:24-bookworm-slim AS runtime
 WORKDIR /app
+# Coolify's health check runs `curl … || wget …` inside the container and replaces the
+# HEALTHCHECK below. The slim image ships neither, so without curl the container is marked
+# unhealthy forever, and Traefik won't route to an unhealthy container (404, no certificate).
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+ && rm -rf /var/lib/apt/lists/*
 # SHUTDOWN_TIMEOUT: the entrance screen keeps a live stream open, and adapter-node otherwise
 # waits 30s for it on SIGTERM, well past Docker's 10s stop grace. 3s lets SQLite close cleanly.
 ENV NODE_ENV=production PORT=3000 DB_PATH=/data/attendance.db SHUTDOWN_TIMEOUT=3
@@ -32,7 +37,7 @@ RUN mkdir -p /data && chown -R node:node /data
 USER node
 VOLUME /data
 EXPOSE 3000
-# node's fetch, so no curl/wget dependency.
+# For plain `docker run`; under Coolify its own curl check (above) takes over.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 ENTRYPOINT ["./docker-entrypoint.sh"]

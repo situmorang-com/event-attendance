@@ -1,0 +1,42 @@
+# Tests gate the deploy; Coolify does the build.
+#
+# Repository secrets: COOLIFY_WEBHOOK (from `coolify.sh webhook-url <uuid>`) and COOLIFY_TOKEN
+# (a Coolify token with ONLY the `deploy` permission; CI never needs more). Until both exist
+# the deploy step skips itself, so the checks still run and stay green.
+# Auto Deploy is off on the Coolify app, so a push never deploys twice.
+name: Deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with: { node-version: 24, cache: npm }
+      # Same as the Dockerfile: better-sqlite3 loads its bundled prebuild, no node-gyp.
+      - run: npm ci --ignore-scripts
+      - run: npm run check
+      - run: npm test
+      - run: npm run build
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Coolify
+        env:
+          COOLIFY_WEBHOOK: ${{ secrets.COOLIFY_WEBHOOK }}
+          COOLIFY_TOKEN: ${{ secrets.COOLIFY_TOKEN }}
+        run: |
+          if [ -z "$COOLIFY_WEBHOOK" ] || [ -z "$COOLIFY_TOKEN" ]; then
+            echo "::notice::COOLIFY_WEBHOOK or COOLIFY_TOKEN is not set; skipping the deploy"
+            exit 0
+          fi
+          curl -fsS -X POST "$COOLIFY_WEBHOOK" \
+            -H "Authorization: Bearer $COOLIFY_TOKEN" \
+            -H "Accept: application/json"
