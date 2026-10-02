@@ -1,12 +1,14 @@
 <script lang="ts">
 	interface Props {
 		eventId: string;
-		current: 'checkins' | 'invitations';
+		current: 'checkins' | 'invitations' | 'planning';
 		checkins: number;
 		invitations: number;
+		/** Suggested people waiting for a decision. */
+		suggestions: number;
 	}
 
-	let { eventId, current, checkins, invitations }: Props = $props();
+	let { eventId, current, checkins, invitations, suggestions }: Props = $props();
 
 	const tabs = $derived([
 		{ key: 'checkins', label: 'Check-ins', href: `/admin/events/${eventId}`, count: checkins },
@@ -15,6 +17,12 @@
 			label: 'Invitations',
 			href: `/admin/events/${eventId}/invitations`,
 			count: invitations
+		},
+		{
+			key: 'planning',
+			label: 'Planning',
+			href: `/admin/events/${eventId}/planning`,
+			count: suggestions
 		}
 	]);
 </script>

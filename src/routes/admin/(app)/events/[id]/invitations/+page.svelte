@@ -162,7 +162,7 @@
 </script>
 
 <svelte:head>
-	<title>Invitations · {event.name} · Hadir</title>
+	<title>Invitations · {event.name} · Event Planner</title>
 </svelte:head>
 
 <a class="back btn btn-ghost btn-sm" href="/admin"><ArrowLeft size={16} /> Events</a>
@@ -195,7 +195,13 @@
 	</div>
 </header>
 
-<EventTabs eventId={event.id} current="invitations" checkins={data.checkins} invitations={total} />
+<EventTabs
+	eventId={event.id}
+	current="invitations"
+	checkins={data.checkins}
+	invitations={total}
+	suggestions={data.suggestions}
+/>
 
 <datalist id="company-options">
 	{#each data.companies as company (company.name)}

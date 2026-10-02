@@ -9,7 +9,7 @@
 </script>
 
 <svelte:head>
-	<title>New event · Hadir</title>
+	<title>New event · Event Planner</title>
 </svelte:head>
 
 <a class="back btn btn-ghost btn-sm" href="/admin"><ArrowLeft size={16} /> Events</a>

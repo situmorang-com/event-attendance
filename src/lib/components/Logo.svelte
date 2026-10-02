@@ -23,7 +23,7 @@
 			stroke-linejoin="round"
 		/>
 	</svg>
-	{#if wordmark}<span class="word">Hadir</span>{/if}
+	{#if wordmark}<span class="word">Event Planner</span>{/if}
 </span>
 
 <style>
@@ -38,5 +38,6 @@
 		font-weight: 800;
 		letter-spacing: -0.03em;
 		color: var(--text);
+		white-space: nowrap;
 	}
 </style>

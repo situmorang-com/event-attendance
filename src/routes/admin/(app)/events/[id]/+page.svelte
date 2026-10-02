@@ -93,7 +93,7 @@
 </script>
 
 <svelte:head>
-	<title>{event.name} · Hadir</title>
+	<title>{event.name} · Event Planner</title>
 </svelte:head>
 
 <a class="back btn btn-ghost btn-sm" href="/admin"><ArrowLeft size={16} /> Events</a>
@@ -140,6 +140,7 @@
 	current="checkins"
 	checkins={stats.total}
 	invitations={data.invitations}
+	suggestions={data.suggestions}
 />
 
 {#if data.created}

@@ -4,6 +4,7 @@ import { listAttendees } from '$lib/server/checkins';
 import { DEFAULT_PHONE_COUNTRY } from '$lib/server/config';
 import { getContacts } from '$lib/server/contacts';
 import { db } from '$lib/server/db';
+import { countNewSuggestions } from '$lib/server/planning';
 import { getEvent } from '$lib/server/events';
 import { parseGuestList } from '$lib/server/guest-list';
 import {
@@ -104,6 +105,7 @@ export const load: PageServerLoad = ({ params }) => {
 				}))
 			: [],
 		checkins: checkins.length,
+		suggestions: countNewSuggestions(db, event.id),
 		companies: companySuggestions(db)
 	};
 };

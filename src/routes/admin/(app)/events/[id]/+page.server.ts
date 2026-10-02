@@ -5,6 +5,7 @@ import { publish } from '$lib/server/bus';
 import { checkIn, listAttendees, removeCheckin } from '$lib/server/checkins';
 import { DEFAULT_PHONE_COUNTRY } from '$lib/server/config';
 import { db } from '$lib/server/db';
+import { countNewSuggestions } from '$lib/server/planning';
 import { parseEventForm } from '$lib/server/event-form';
 import { deleteEvent, getEvent, setEventOpen, updateEvent } from '$lib/server/events';
 import { countInvitations } from '$lib/server/invitations';
@@ -30,6 +31,7 @@ export const load: PageServerLoad = ({ params, url }) => {
 		attendees,
 		stats: computeStats(attendees, { now, isOpen: !!event.is_open }),
 		invitations: countInvitations(db, event.id),
+		suggestions: countNewSuggestions(db, event.id),
 		staticLink: checkinUrl(base, event.id),
 		reachable,
 		created: url.searchParams.has('created'),

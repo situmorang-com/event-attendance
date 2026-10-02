@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-# Hadir: SvelteKit (adapter-node) + better-sqlite3, for Coolify's Dockerfile build pack.
+# Event Planner: SvelteKit (adapter-node) + better-sqlite3, for Coolify's Dockerfile build pack.
 # Debian, not Alpine. better-sqlite3 13 ships prebuilt linux-x64/arm64 bindings inside the
 # package and loads them first, so the image needs no compiler toolchain.
 

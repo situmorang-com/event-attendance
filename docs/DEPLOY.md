@@ -1,7 +1,7 @@
-# Deploying Hadir to Coolify
+# Deploying Event Planner to Coolify
 
 Target: **https://checkin.situmorang.com** on the Coolify at https://coolify.situmorang.com
-(server `72.60.233.198`), built from `situmorang-com/event-attendance` (public), branch `main`.
+(server `72.60.233.198`), built from `situmorang-com/event-planner` (public), branch `main`.
 
 Each step is marked **verified** (run and checked) or **configured** (set up, not exercised).
 
@@ -17,7 +17,7 @@ Dockerfile build pack, port 3000, health check `GET /healthz` expecting 200, mem
 512m, and **single writer**:
 
 ```sh
-coolify.sh app create --name hadir --repo situmorang-com/event-attendance --branch main \
+coolify.sh app create --name hadir --repo situmorang-com/event-planner --branch main \
   --project 2qoq4g12mrjxcdkwousez2dx --server p40c04owo8wckgcg8woo8888 \
   --domain https://checkin.situmorang.com --port 3000 --health-path /healthz \
   --memory 512m --single-writer
@@ -40,7 +40,7 @@ it replaces the Dockerfile's own `HEALTHCHECK`. `node:*-slim` ships neither tool
 ### Single writer, not rolling updates
 
 Coolify's default deploy runs the new container beside the old one, then switches traffic.
-Hadir can't do that safely:
+The app can't do that safely:
 
 - SQLite gets exactly one writer.
 - The live entrance-screen feed and the rate limits live in the process's memory, so a second

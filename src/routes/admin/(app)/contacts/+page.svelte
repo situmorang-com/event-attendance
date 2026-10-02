@@ -21,7 +21,7 @@
 </script>
 
 <svelte:head>
-	<title>Contacts · Hadir</title>
+	<title>Contacts · Event Planner</title>
 </svelte:head>
 
 <div class="head">

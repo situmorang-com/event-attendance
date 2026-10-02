@@ -7,7 +7,7 @@
 </script>
 
 <svelte:head>
-	<title>Hadir · Scan. Tap. You’re in.</title>
+	<title>Event Planner · Scan. Tap. You’re in.</title>
 </svelte:head>
 
 <div class="aurora" aria-hidden="true"></div>

@@ -1,15 +1,15 @@
-# Hadir
+# Event Planner
 
 Event check-in that takes seconds. Attendees scan a QR code at the door, fill in their details
 from their own phone's contact card, and land in one de-duplicated contact database. Organizers
 get a live entrance screen and a dashboard.
 
-_Hadir_ is Indonesian and Malay for "present", the word you answer at roll call.
+Formerly called _Hadir_, the word you answer at roll call in Indonesian and Malay.
 
 ## How the phone's contact card gets into the form
 
 No website can read a phone's contacts or its owner card silently. iOS and Android both block
-that, and even native apps must ask first. Hadir uses the standard, consented routes instead,
+that, and even native apps must ask first. The app uses the standard, consented routes instead,
 which are just as fast for the attendee:
 
 | Phone                | What happens                                                                                                                                                                                                                                                         |
@@ -30,6 +30,9 @@ dev server it stays hidden and the autofill path is used instead.
 - **Printable QR mode** for posters, badges and table cards, with an A4 poster page.
 - **Dashboard.** Check-ins, new versus returning contacts, the busiest window, an arrivals chart,
   a device split and a searchable attendee list, all updating live.
+- **Finding people to invite.** Describe who an event is for, list target companies, and let
+  `claude -p` suggest matching people from public sources for you to approve. See
+  [Planning](#planning-finding-people-to-invite).
 - **Invitation planner.** Every event has a guest list, grouped by company. Add people from your
   contacts, type names, or paste rows from a spreadsheet. Record each reply with one tap
   (attending, tentative, declined) plus a note, and send a WhatsApp or email follow-up that fits
@@ -70,7 +73,7 @@ Open an event and switch to its **Invitations** tab.
 - **Checking each field.** Press **Check each field** to see what you typed or pasted split into
   one card per person (name, company, job title, email, mobile, LinkedIn, reply, note). Fix
   anything, add or remove rows, then add them. Nothing is saved before that.
-- **LinkedIn links.** A profile link works on its own, one per line: Hadir reads the name from
+- **LinkedIn links.** A profile link works on its own, one per line: the app reads the name from
   the link (`linkedin.com/in/rina-wijaya-4a1b2c` is "Rina Wijaya") and keeps the link on the
   guest so you can open the profile and fill in the rest. It doesn't fetch the profile itself:
   LinkedIn's terms forbid scraping and profiles sit behind a sign-in. When a link doesn't spell
@@ -91,6 +94,28 @@ Open an event and switch to its **Invitations** tab.
   "Bapak Hendra Gunawan, S.E." on the list is the "Hendra Gunawan" who scans in. _Not arrived_
   lists who said yes but hasn't come. _Walk-ins_ lists who came without an invitation, and one
   tap adds them to the list.
+
+## Planning: finding people to invite
+
+The **Planning** tab helps you decide who to invite before the guest list exists.
+
+1. **Who should come?** Answer a few questions for the event: what it's for, which roles,
+   how senior, which departments, how many per company, and who to leave out.
+2. **Target companies.** One per line, with a website if you know it. Give a company its own
+   focus ("only their finance team") when it differs from the brief.
+3. **Find people with Claude.** Create a token (shown once), `export HADIR_TOKEN=…` in your
+   terminal, and run the command the page shows. Your terminal fetches the event's research
+   brief, `claude -p` researches it with web search and fetch only, and the answer is posted
+   back. Claude never sees the token and has no shell, so a web page that tries to hijack it has
+   nothing to send. It sticks to public sources (company sites, news, search results) and work
+   details only: no LinkedIn sign-in, no emails or phone numbers.
+4. **Suggested people.** Each suggestion shows the title, why it fits, and its source. **Add**
+   puts the person on the guest list; dismissing hides them. Neither is suggested again, and
+   neither is anyone already invited, so re-running only brings new people.
+
+The API behind step 3 is `GET /api/research/events/<id>/prompt` and
+`POST /api/research/events/<id>/suggestions`, both with `Authorization: Bearer <token>`.
+Tokens are stored hashed and can be revoked on the same page.
 
 ## Configuration
 
