@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { goto } from '$app/navigation';
+	import { mailtoHref } from '$lib/mailto';
 	import { initials } from '$lib/names';
 	import { timeAgo } from '$lib/time';
 	import Download from '@lucide/svelte/icons/download';
@@ -83,7 +84,7 @@
 								</div>
 							</td>
 							<td
-								>{#if c.email}<a href="mailto:{c.email}">{c.email}</a>{:else}<span class="muted"
+								>{#if c.email}<a href={mailtoHref(c.email)}>{c.email}</a>{:else}<span class="muted"
 										>–</span
 									>{/if}</td
 							>
