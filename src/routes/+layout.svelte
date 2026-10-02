@@ -8,7 +8,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
-	<title>Hadir · Event check-in</title>
+	<title>Event Planner · Check-in</title>
 </svelte:head>
 
 {@render children()}

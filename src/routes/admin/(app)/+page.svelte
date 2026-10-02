@@ -12,7 +12,7 @@
 </script>
 
 <svelte:head>
-	<title>Events · Hadir</title>
+	<title>Events · Event Planner</title>
 </svelte:head>
 
 <div class="head">

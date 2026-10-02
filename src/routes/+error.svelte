@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-	<title>{page.status === 404 ? 'Not found' : 'Something went wrong'} · Hadir</title>
+	<title>{page.status === 404 ? 'Not found' : 'Something went wrong'} · Event Planner</title>
 </svelte:head>
 
 <main>

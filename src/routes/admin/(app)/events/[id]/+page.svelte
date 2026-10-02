@@ -9,6 +9,7 @@
 	import EventTabs from '$lib/components/EventTabs.svelte';
 	import QrCode from '$lib/components/QrCode.svelte';
 	import { connectLive, type LiveArrival, type LiveQr } from '$lib/live';
+	import { mailtoHref } from '$lib/mailto';
 	import { initials } from '$lib/names';
 	import { formatDateTime, formatTime } from '$lib/time';
 	import ArrowLeft from '@lucide/svelte/icons/arrow-left';
@@ -93,7 +94,7 @@
 </script>
 
 <svelte:head>
-	<title>{event.name} · Hadir</title>
+	<title>{event.name} · Event Planner</title>
 </svelte:head>
 
 <a class="back btn btn-ghost btn-sm" href="/admin"><ArrowLeft size={16} /> Events</a>
@@ -140,6 +141,7 @@
 	current="checkins"
 	checkins={stats.total}
 	invitations={data.invitations}
+	suggestions={data.suggestions}
 />
 
 {#if data.created}
@@ -390,7 +392,7 @@
 								</div>
 							</td>
 							<td
-								>{#if a.email}<a href="mailto:{a.email}">{a.email}</a>{:else}<span class="muted"
+								>{#if a.email}<a href={mailtoHref(a.email)}>{a.email}</a>{:else}<span class="muted"
 										>–</span
 									>{/if}</td
 							>

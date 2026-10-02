@@ -22,7 +22,7 @@
 <div class="shell">
 	<header>
 		<div class="bar">
-			<a href="/admin" class="home" aria-label="Hadir home"><Logo size={30} /></a>
+			<a href="/admin" class="home" aria-label="Event Planner home"><Logo size={30} /></a>
 			<nav>
 				{#each links as link (link.href)}
 					<a href={link.href} aria-current={link.active(page.url.pathname) ? 'page' : undefined}>

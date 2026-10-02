@@ -65,6 +65,56 @@ const SCHEMA = `
 	);
 	CREATE INDEX IF NOT EXISTS idx_invitations_event ON invitations(event_id);
 	CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email);
+
+	-- Who an event is for, answered on the planning page; it briefs the research agent.
+	CREATE TABLE IF NOT EXISTS invite_briefs (
+		event_id TEXT PRIMARY KEY REFERENCES events(id) ON DELETE CASCADE,
+		goal TEXT NOT NULL DEFAULT '',
+		roles TEXT NOT NULL DEFAULT '',
+		seniority TEXT NOT NULL DEFAULT '[]',
+		departments TEXT NOT NULL DEFAULT '[]',
+		per_company INTEGER NOT NULL DEFAULT 3,
+		avoid TEXT NOT NULL DEFAULT '',
+		updated_at INTEGER NOT NULL
+	);
+
+	CREATE TABLE IF NOT EXISTS target_companies (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+		name TEXT NOT NULL,
+		website TEXT NOT NULL DEFAULT '',
+		-- Overrides the brief for this company: "only their finance team".
+		focus TEXT NOT NULL DEFAULT '',
+		created_at INTEGER NOT NULL
+	);
+	CREATE INDEX IF NOT EXISTS idx_targets_event ON target_companies(event_id);
+
+	-- People the research agent proposes. Nothing reaches the guest list until approved, and a
+	-- dismissed person stays here so they aren't proposed again.
+	CREATE TABLE IF NOT EXISTS suggestions (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		event_id TEXT NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+		company TEXT NOT NULL,
+		name TEXT NOT NULL,
+		job_title TEXT NOT NULL DEFAULT '',
+		linkedin TEXT,
+		source_url TEXT NOT NULL DEFAULT '',
+		reason TEXT NOT NULL DEFAULT '',
+		status TEXT NOT NULL DEFAULT 'new' CHECK (status IN ('new', 'added', 'dismissed')),
+		created_at INTEGER NOT NULL,
+		decided_at INTEGER
+	);
+	CREATE INDEX IF NOT EXISTS idx_suggestions_event ON suggestions(event_id, status);
+
+	-- Bearer tokens for the research API. Only a hash is kept; the token is shown once.
+	CREATE TABLE IF NOT EXISTS api_tokens (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		label TEXT NOT NULL,
+		hash TEXT NOT NULL UNIQUE,
+		created_at INTEGER NOT NULL,
+		last_used_at INTEGER,
+		revoked_at INTEGER
+	);
 `;
 
 /** Brings a database up to date. Safe to run on every start, and on a reused connection. */

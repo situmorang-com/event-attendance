@@ -1,3 +1,4 @@
+import { mailtoHref } from '$lib/mailto';
 import { formatDate, formatTime } from '$lib/time';
 
 export type Reply = 'pending' | 'yes' | 'maybe' | 'no';
@@ -196,10 +197,8 @@ export function followUpLink(
 		return { via: 'whatsapp', href: `https://wa.me/${number}?text=${encodeURIComponent(text)}` };
 	}
 	if (guest.email) {
-		// Encoded, so an address like "x@y.co?bcc=…" can't add recipients of its own.
-		const to = encodeURIComponent(guest.email).replace(/%40/g, '@');
 		const query = `subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(text)}`;
-		return { via: 'email', href: `mailto:${to}?${query}` };
+		return { via: 'email', href: `${mailtoHref(guest.email)}?${query}` };
 	}
 	return null;
 }

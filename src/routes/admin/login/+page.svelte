@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-	<title>Sign in · Hadir</title>
+	<title>Sign in · Event Planner</title>
 </svelte:head>
 
 <div class="aurora" aria-hidden="true"></div>
